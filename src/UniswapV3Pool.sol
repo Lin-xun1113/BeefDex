@@ -4,11 +4,12 @@ pragma solidity ^0.8.20;
 import "./lib/Tick.sol";
 import "./lib/Position.sol";
 import "./interfaces/IUniswapV3MintCallback.sol";
+import "./interfaces/IUniswapV3SwapCallback.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "forge-std/console2.sol";
 
 contract UniswapV3Pool {
-using Tick for mapping(int24 => Tick.Info);
+    using Tick for mapping(int24 => Tick.Info);
     using Position for mapping(bytes32 => Position.Info);
     using Position for Position.Info;
 
@@ -68,30 +69,31 @@ using Tick for mapping(int24 => Tick.Info);
     mapping(bytes32 => Position.Info) public positions;
 
     constructor(
-        address _token0,
-        address _token1,
-        uint160 _sqrtPriceX96,
-        int24 _tick
-
+        address token0_,
+        address token1_,
+        uint160 sqrtPriceX96,
+        int24 tick
     ) {
-        token0 = _token0;
-        token1 = _token1;
+        token0 = token0_;
+        token1 = token1_;
 
-        slot0 = Slot0({sqrtPriceX96: _sqrtPriceX96, tick: _tick});
+        slot0 = Slot0({sqrtPriceX96: sqrtPriceX96, tick: tick});
     }
-
 
     function mint(
         address owner,
         int24 lowerTick,
         int24 upperTick,
-        uint128 amount
+        uint128 amount,
+        bytes calldata data
     ) external returns (uint256 amount0, uint256 amount1) {
-        if (lowerTick >= upperTick || 
-            lowerTick < MIN_TICK || 
+        if (
+            lowerTick >= upperTick ||
+            lowerTick < MIN_TICK ||
             upperTick > MAX_TICK
         ) revert InvalidTickRange();
-        if (amount == 0) revert ZeroLiquidity();    
+
+        if (amount == 0) revert ZeroLiquidity();
 
         ticks.update(lowerTick, amount);
         ticks.update(upperTick, amount);
@@ -103,15 +105,10 @@ using Tick for mapping(int24 => Tick.Info);
         );
         position.update(amount);
 
-        console2.log("liquidity", position.liquidity);
-        // 遗漏处：如果当前tick在position范围内，更新全局流动性
-        if (slot0.tick >= lowerTick && slot0.tick < upperTick) {
-            liquidity += amount;
-        }
+        amount0 = 0.998976618347425280 ether; // TODO: replace with calculation
+        amount1 = 5000 ether; // TODO: replace with calculation
 
-        // 设置返回值而不是创建同名局部变量
-        amount0 = 0.998976618347425280 ether;
-        amount1 = 5000 ether;
+        liquidity += uint128(amount);
 
         uint256 balance0Before;
         uint256 balance1Before;
@@ -119,23 +116,64 @@ using Tick for mapping(int24 => Tick.Info);
         if (amount1 > 0) balance1Before = balance1();
         IUniswapV3MintCallback(msg.sender).uniswapV3MintCallback(
             amount0,
-            amount1
+            amount1,
+            data
         );
         if (amount0 > 0 && balance0Before + amount0 > balance0())
             revert InsufficientInputAmount();
         if (amount1 > 0 && balance1Before + amount1 > balance1())
             revert InsufficientInputAmount();
 
-        emit Mint(msg.sender, owner, lowerTick, upperTick, amount, amount0, amount1);
-        
-        // 不需要显式返回，因为我们已经设置了命名返回值
+        emit Mint(
+            msg.sender,
+            owner,
+            lowerTick,
+            upperTick,
+            amount,
+            amount0,
+            amount1
+        );
     }
 
+    function swap(address recipient, bytes calldata data)
+        public
+        returns (int256 amount0, int256 amount1)
+    {
+        int24 nextTick = 85184;
+        uint160 nextPrice = 5604469350942327889444743441197;
 
-    //////////////////////////
-    /////    INTERNAL   //////
-    //////////////////////////
+        amount0 = -0.008396714242162444 ether;
+        amount1 = 42 ether;
 
+        (slot0.tick, slot0.sqrtPriceX96) = (nextTick, nextPrice);
+
+        IERC20(token0).transfer(recipient, uint256(-amount0));
+
+        uint256 balance1Before = balance1();
+        IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(
+            amount0,
+            amount1,
+            data
+        );
+        if (balance1Before + uint256(amount1) > balance1())
+            revert InsufficientInputAmount();
+
+        emit Swap(
+            msg.sender,
+            recipient,
+            amount0,
+            amount1,
+            slot0.sqrtPriceX96,
+            liquidity,
+            slot0.tick
+        );
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    //
+    // INTERNAL
+    //
+    ////////////////////////////////////////////////////////////////////////////
     function balance0() internal view returns (uint256 balance) {
         balance = IERC20(token0).balanceOf(address(this));
     }
@@ -143,7 +181,4 @@ using Tick for mapping(int24 => Tick.Info);
     function balance1() internal view returns (uint256 balance) {
         balance = IERC20(token1).balanceOf(address(this));
     }
-
-
-
 }
