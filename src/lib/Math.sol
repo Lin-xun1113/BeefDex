@@ -2,7 +2,7 @@
 pragma solidity ^0.8.14;
 
 import "./FixedPoint96.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import {Math as OzMath} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 library Math {
     /// @notice Calculates amount0 delta between two prices
@@ -104,7 +104,7 @@ library Math {
         uint256 b,
         uint256 denominator
     ) internal pure returns (uint256 result) {
-        result = Math.mulDiv(a, b, denominator);
+        result = OzMath.mulDiv(a, b, denominator);
         if (mulmod(a, b, denominator) > 0) {
             require(result < type(uint256).max);
             result++;

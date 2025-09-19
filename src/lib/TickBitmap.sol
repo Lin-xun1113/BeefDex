@@ -51,4 +51,4 @@ library TickBitmap {
     }
     return (next, initialized);
 }
-
+}

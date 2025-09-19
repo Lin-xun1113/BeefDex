@@ -256,17 +256,6 @@ contract UniswapV3Pool {
                 revert InsufficientInputAmount();
         }
 
-        IERC20(token0).transfer(recipient, uint256(-amount0));
-
-        uint256 balance1Before = balance1();
-        IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(
-            amount0,
-            amount1,
-            data
-        );
-        if (balance1Before + uint256(amount1) > balance1())
-            revert InsufficientInputAmount();
-
         emit Swap(
             msg.sender,
             recipient,
