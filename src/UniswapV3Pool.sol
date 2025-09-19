@@ -150,7 +150,10 @@ contract UniswapV3Pool {
             amount
         );
 
-        liquidity += uint128(amount);
+        // 只有当前tick在流动性范围内时，才更新全局流动性
+        if (slot0_.tick >= lowerTick && slot0_.tick < upperTick) {
+            liquidity += uint128(amount);
+        }
 
         uint256 balance0Before;
         uint256 balance1Before;
