@@ -8,7 +8,7 @@ interface IUniswapV3Manager {
         int24 upperTick;
         uint256 amount0Desired;
         uint256 amount1Desired;
-        uint256 amount0Min;
+        uint256 amount0Min; //经过滑点计算后的边界值
         uint256 amount1Min;
     }
 }
