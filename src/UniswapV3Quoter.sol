@@ -2,16 +2,14 @@
 
 pragma solidity ^0.8.20;
 
-import "./UniswapV3Pool.sol";
 import "./interfaces/IUniswapV3Pool.sol";
-
-
-
+import "./lib/TickMath.sol";
 
 contract UniswapV3Quoter {
     struct QuoteParams {
         address pool;
         uint256 amountIn;
+        uint160 sqrtPriceLimitX96;
         bool zeroForOne;
     }
 
@@ -21,12 +19,20 @@ contract UniswapV3Quoter {
             uint256 amountOut,
             uint160 sqrtPriceX96After,
             int24 tickAfter
-    ) {
+        )
+    {
         try
             IUniswapV3Pool(params.pool).swap(
                 address(this),
                 params.zeroForOne,
                 params.amountIn,
+                params.sqrtPriceLimitX96 == 0
+                    ? (
+                        params.zeroForOne
+                            ? TickMath.MIN_SQRT_RATIO + 1
+                            : TickMath.MAX_SQRT_RATIO - 1
+                    )
+                    : params.sqrtPriceLimitX96,
                 abi.encode(params.pool)
             )
         {} catch (bytes memory reason) {
@@ -55,6 +61,5 @@ contract UniswapV3Quoter {
             mstore(add(ptr, 0x40), tickAfter)
             revert(ptr, 96)
         }
-
     }
 }
