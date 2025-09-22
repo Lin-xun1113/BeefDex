@@ -10,5 +10,8 @@ out/
 # Docs
 docs/
 
+# Practice
+test-practice/
+
 # Dotenv file
 .env
