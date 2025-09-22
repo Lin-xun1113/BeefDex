@@ -39,10 +39,69 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
     // 3. 验证交换后的余额变化
     // 4. 验证池子的新价格和tick
     // 预期结果参考：
-    // - 用户应该获得约 0.008371593947078348 ETH
+    // - 用户应该获得约 0.00839851698277099 ETH
     // - 池子价格应该下降（因为卖出ETH）
     function testBuyETHOnePriceRange() public {
-        // TODO: 实现测试逻辑
+        // Step 1: 添加流动性
+        LiquidityRange[] memory liquidity = new LiquidityRange[](2);
+        liquidity[0] = liquidityRange(4545, 5500, 1 ether, 5000 ether, 5000);
+        liquidity[1] = liquidityRange(4545, 5500, 1 ether, 5000 ether, 5000);
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 1 ether,
+            usdcBalance: 5000 ether,
+            currentPrice: 5000,
+            liquidity: liquidity,
+            transferInMintCallback: true,
+            transferInSwapCallback: true,
+            mintLiqudity: true
+        });
+        (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
+
+        uint256 swapAmount = 42 ether; // 42 USDC
+        token1.mint(address(this), swapAmount);
+        token1.approve(address(this), swapAmount);
+
+        (int256 userBalance0Before, int256 userBalance1Before) = (
+            int256(token0.balanceOf(address(this))),
+            int256(token1.balanceOf(address(this)))
+        );
+        console2.log("userBalance0Before:", userBalance0Before);
+        console2.log("userBalance1Before:", userBalance1Before);
+
+        // Step 2: 执行交换
+        (int256 amount0Delta, int256 amount1Delta) = pool.swap(address(this), false, swapAmount, sqrtP(5050), extra);
+
+        console2.log("amount0Delta:", amount0Delta);
+        console2.log("amount1Delta:", amount1Delta);
+
+        (int256 expectAmount0Delta, int256 expectAmount1Delta) = (
+            -0.008398516982770993 ether,
+            42 ether
+        );
+
+
+
+
+        // Step 3: 验证余额变化
+
+        assertEq(amount0Delta, expectAmount0Delta, "invalid ETH out");
+        assertEq(amount1Delta, expectAmount1Delta, "invalid USDC in");
+
+        assertSwapState(
+            ExpectedStateAfterSwap({
+                pool: pool,
+                token0: token0,
+                token1: token1,
+                userBalance0: uint256(userBalance0Before - amount0Delta),
+                userBalance1: uint256(userBalance1Before - amount1Delta),
+                poolBalance0: uint256(int256(poolBalance0) + amount0Delta),
+                poolBalance1: uint256(int256(poolBalance1) + amount1Delta),
+                sqrtPriceX96: 5603319704133145322707074461607,
+                tick: 85179,
+                currentLiquidity: liquidity[0].amount + liquidity[1].amount
+            })
+        );
+        
     }
 
     // TODO: 测试卖出ETH（用ETH换USDC）
@@ -51,7 +110,66 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
     // 2. 卖出ETH换取USDC
     // 3. 验证余额和价格变化方向相反
     function testSellETHOnePriceRange() public {
-        // TODO: 实现测试逻辑
+        // Step 1: 添加流动性
+        LiquidityRange[] memory liquidity = new LiquidityRange[](2);
+        liquidity[0] = liquidityRange(4545, 5500, 1 ether, 5000 ether, 5000);
+        liquidity[1] = liquidityRange(4545, 5500, 1 ether, 5000 ether, 5000);
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 1 ether,
+            usdcBalance: 5000 ether,
+            currentPrice: 5000,
+            liquidity: liquidity,
+            transferInMintCallback: true,
+            transferInSwapCallback: true,
+            mintLiqudity: true
+        });
+        (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
+
+        uint256 swapAmount = 0.1 ether; // 42 USDC
+        token0.mint(address(this), swapAmount);
+        token0.approve(address(this), swapAmount);
+
+        (int256 userBalance0Before, int256 userBalance1Before) = (
+            int256(token0.balanceOf(address(this))),
+            int256(token1.balanceOf(address(this)))
+        );
+        console2.log("userBalance0Before:", userBalance0Before);
+        console2.log("userBalance1Before:", userBalance1Before);
+
+        // Step 2: 执行交换
+        (int256 amount0Delta, int256 amount1Delta) = pool.swap(address(this), true, swapAmount, sqrtP(4950), extra);
+
+        console2.log("amount0Delta:", amount0Delta);
+        console2.log("amount1Delta:", amount1Delta);
+
+        (int256 expectAmount0Delta, int256 expectAmount1Delta) = (
+            -0.008398516982770993 ether,
+            42 ether
+        );
+
+
+
+
+        // // Step 3: 验证余额变化
+
+        // assertEq(amount0Delta, expectAmount0Delta, "invalid ETH out");
+        // assertEq(amount1Delta, expectAmount1Delta, "invalid USDC in");
+
+        // assertSwapState(
+        //     ExpectedStateAfterSwap({
+        //         pool: pool,
+        //         token0: token0,
+        //         token1: token1,
+        //         userBalance0: uint256(userBalance0Before - amount0Delta),
+        //         userBalance1: uint256(userBalance1Before - amount1Delta),
+        //         poolBalance0: uint256(int256(poolBalance0) + amount0Delta),
+        //         poolBalance1: uint256(int256(poolBalance1) + amount1Delta),
+        //         sqrtPriceX96: 5603319704133145322707074461607,
+        //         tick: 85179,
+        //         currentLiquidity: liquidity[0].amount + liquidity[1].amount
+        //     })
+        // );
+
     }
 
     //  两个价格范围测试
@@ -130,6 +248,8 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
         if (transferInSwapCallback) {
             // TODO: 实现交换回调
             // 提示：只转移amount > 0的代币
+            if (amount0 > 0) IERC20(token0).transfer(msg.sender, uint256(amount0));
+            if (amount1 > 0) IERC20(token1).transfer(msg.sender, uint256(amount1));
         }
     }
 

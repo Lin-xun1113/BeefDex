@@ -215,7 +215,7 @@ contract UniswapV3Pool is IUniswapV3Pool {
                 state.tick = TickMath.getTickAtSqrtRatio(state.sqrtPriceX96);
             }
         }
-
+        console2.log("success out loop");
         if (state.tick != slot0_.tick) {
             (slot0.sqrtPriceX96, slot0.tick) = (state.sqrtPriceX96, state.tick);
         }
@@ -227,6 +227,7 @@ contract UniswapV3Pool is IUniswapV3Pool {
             : (-int256(state.amountCalculated), int256(amountSpecified - state.amountSpecifiedRemaining));
 
         if (zeroForOne) {
+            console2.log("1");
             IERC20(token1).transfer(recipient, uint256(-amount1));
 
             uint256 balance0Before = balance0();
@@ -235,10 +236,16 @@ contract UniswapV3Pool is IUniswapV3Pool {
                 revert InsufficientInputAmount();
             }
         } else {
+            console2.log("2");
+            console2.log("amount0", amount0);
+            console2.log("poolamount0", balance0());
             IERC20(token0).transfer(recipient, uint256(-amount0));
 
             uint256 balance1Before = balance1();
             IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
+            console2.log("balance1Before", balance1Before);
+            console2.log("amount1", amount1);
+            console2.log("poolamount1", balance1());
             if (balance1Before + uint256(amount1) > balance1()) {
                 revert InsufficientInputAmount();
             }

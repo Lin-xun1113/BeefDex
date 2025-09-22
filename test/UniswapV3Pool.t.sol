@@ -158,7 +158,30 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
     // 4. 确保正确支付手续费
     // 5. 验证最终池子余额增加了手续费
     function testFlash() public {
-        // TODO: 实现测试逻辑
+        // Step 1: 添加流动性
+        LiquidityRange[] memory liquidity = new LiquidityRange[](1);
+        liquidity[0] = liquidityRange(4545, 5500, 10 ether, 50000 ether, 5000);
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 10 ether,
+            usdcBalance: 50000 ether,
+            currentPrice: 5000,
+            liquidity: liquidity,
+            transferInMintCallback: true,
+            transferInSwapCallback: true,
+            mintLiqudity: true
+        });
+        (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
+
+
+        
+        // need fix below
+        pool.flash(
+            1 ether,
+            10000 ether,
+            abi.encodePacked(uint256(1 ether), uint256(10000 ether))
+        );
+
+        assertTrue(flashCallbackCalled, "flash callback wasn't called");
     }
 
     // TODO: 测试收取流动性的功能
@@ -186,7 +209,7 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
         // 只需要转移要支付的代币（amount > 0的那个）
     }
 
-    function uniswapV3FlashCallback(uint256 amount0, uint256 amount1, bytes calldata data) public {
+    function uniswapV3FlashCallback(bytes calldata data) public {
         flashCallbackCalled = true;
         (uint256 amount0, uint256 amount1) = abi.decode(data, (uint256, uint256));
 
