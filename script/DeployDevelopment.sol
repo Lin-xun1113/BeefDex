@@ -18,12 +18,7 @@ contract DeployDevelopment is Script {
         ERC20Mintable token0 = new ERC20Mintable("Wrapped Ether", "WETH");
         ERC20Mintable token1 = new ERC20Mintable("USD Coin", "USDC");
 
-        UniswapV3Pool pool = new UniswapV3Pool(
-            address(token0),
-            address(token1),
-            currentSqrtP,
-            currentTick
-        );
+        UniswapV3Pool pool = new UniswapV3Pool(address(token0), address(token1), currentSqrtP, currentTick);
 
         UniswapV3Manager manager = new UniswapV3Manager();
         UniswapV3Quoter quoter = new UniswapV3Quoter();
@@ -38,6 +33,5 @@ contract DeployDevelopment is Script {
         console.log("Pool address", address(pool));
         console.log("Manager address", address(manager));
         console.log("Quoter address", address(quoter));
-
     }
 }

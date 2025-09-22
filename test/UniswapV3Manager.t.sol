@@ -93,12 +93,11 @@ contract UniswapV3ManagerTest is Test, TestUtils {
     }
 
     // 辅助函数：创建MintParams
-    function mintParams(
-        int24 lowerTick,
-        int24 upperTick,
-        uint256 amount0,
-        uint256 amount1
-    ) internal view returns (IUniswapV3Manager.MintParams memory) {
+    function mintParams(int24 lowerTick, int24 upperTick, uint256 amount0, uint256 amount1)
+        internal
+        view
+        returns (IUniswapV3Manager.MintParams memory)
+    {
         return IUniswapV3Manager.MintParams({
             poolAddress: address(pool),
             lowerTick: lowerTick,
@@ -128,12 +127,8 @@ contract UniswapV3ManagerTest is Test, TestUtils {
         token0.mint(address(this), params.wethBalance);
         token1.mint(address(this), params.usdcBalance);
 
-        pool = new UniswapV3Pool(
-            address(token0),
-            address(token1),
-            sqrtP(params.currentPrice),
-            tick(params.currentPrice)
-        );
+        pool =
+            new UniswapV3Pool(address(token0), address(token1), sqrtP(params.currentPrice), tick(params.currentPrice));
 
         if (params.mintLiqudity) {
             token0.approve(address(manager), params.wethBalance);
@@ -144,9 +139,7 @@ contract UniswapV3ManagerTest is Test, TestUtils {
             uint256 poolBalance1Tmp;
             for (uint256 i = 0; i < params.mints.length; i++) {
                 params.mints[i].poolAddress = address(pool);
-                (poolBalance0Tmp, poolBalance1Tmp) = manager.mint(
-                    params.mints[i]
-                );
+                (poolBalance0Tmp, poolBalance1Tmp) = manager.mint(params.mints[i]);
                 poolBalance0 += poolBalance0Tmp;
                 poolBalance1 += poolBalance1Tmp;
             }
@@ -154,7 +147,7 @@ contract UniswapV3ManagerTest is Test, TestUtils {
 
         transferInMintCallback = params.transferInMintCallback;
         transferInSwapCallback = params.transferInSwapCallback;
-        
+
         poolBalance0 = token0.balanceOf(address(pool));
         poolBalance1 = token1.balanceOf(address(pool));
     }

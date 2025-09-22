@@ -25,12 +25,7 @@ contract UniswapV3QuoterTest is Test, TestUtils {
         token0.mint(address(this), wethBalance);
         token1.mint(address(this), usdcBalance);
 
-        pool = new UniswapV3Pool(
-            address(token0),
-            address(token1),
-            sqrtP(5000),
-            tick(5000)
-        );
+        pool = new UniswapV3Pool(address(token0), address(token1), sqrtP(5000), tick(5000));
 
         manager = new UniswapV3Manager();
 

@@ -33,25 +33,17 @@ abstract contract UniswapV3PoolUtils is Test, TestUtils {
             lowerTick: tick(lowerPrice),
             upperTick: tick(upperPrice),
             amount: LiquidityMath.getLiquidityForAmounts(
-                sqrtP(currentPrice),
-                sqrtP(lowerPrice),
-                sqrtP(upperPrice),
-                amount0,
-                amount1
+                sqrtP(currentPrice), sqrtP(lowerPrice), sqrtP(upperPrice), amount0, amount1
             )
         });
     }
 
-    function liquidityRange(
-        uint256 lowerPrice,
-        uint256 upperPrice,
-        uint128 amount
-    ) internal pure returns (LiquidityRange memory range) {
-        range = LiquidityRange({
-            lowerTick: tick(lowerPrice),
-            upperTick: tick(upperPrice),
-            amount: amount
-        });
+    function liquidityRange(uint256 lowerPrice, uint256 upperPrice, uint128 amount)
+        internal
+        pure
+        returns (LiquidityRange memory range)
+    {
+        range = LiquidityRange({lowerTick: tick(lowerPrice), upperTick: tick(upperPrice), amount: amount});
     }
 
     // setupTestCase 必须在具体的测试合约中实现

@@ -38,7 +38,7 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
         // Step 1: 创建流动性范围数组
         LiquidityRange[] memory liquidity = new LiquidityRange[](1);
         liquidity[0] = liquidityRange(4545, 5500, 1 ether, 5000 ether, 5000);
-        
+
         // Step 2: 设置测试参数
         TestCaseParams memory params = TestCaseParams({
             wethBalance: 1 ether,
@@ -49,26 +49,15 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
             transferInSwapCallback: true,
             mintLiqudity: true
         });
-        
+
         // Step 3: 调用已实现的setupTestCase
         (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
 
-        (uint256 expectedAmount0, uint256 expectedAmount1) = (
-            0.998995580131581600 ether,
-            4999.999999999999999999 ether
-        );
-        
+        (uint256 expectedAmount0, uint256 expectedAmount1) = (0.9989955801315816 ether, 4999.999999999999999999 ether);
+
         // Step 4: 验证结果
-        assertEq(
-            poolBalance0,
-            expectedAmount0,
-            "incorrect token0 deposited amount"
-        );
-        assertEq(
-            poolBalance1,
-            expectedAmount1,
-            "incorrect token1 deposited amount"
-        );
+        assertEq(poolBalance0, expectedAmount0, "incorrect token0 deposited amount");
+        assertEq(poolBalance1, expectedAmount1, "incorrect token1 deposited amount");
     }
 
     // TODO: 测试在价格范围下方铸造流动性
@@ -80,7 +69,7 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
         // Step 1: 创建流动性范围数组
         LiquidityRange[] memory liquidity = new LiquidityRange[](1);
         liquidity[0] = liquidityRange(4545, 4900, 1 ether, 5000 ether, 5000);
-        
+
         // Step 2: 设置测试参数
         TestCaseParams memory params = TestCaseParams({
             wethBalance: 1 ether,
@@ -91,26 +80,15 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
             transferInSwapCallback: true,
             mintLiqudity: true
         });
-        
+
         // Step 3: 调用已实现的setupTestCase
         (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
 
-        (uint256 expectedAmount0, uint256 expectedAmount1) = (
-            0 ether,
-            4999.999999999999999999 ether
-        );
-        
+        (uint256 expectedAmount0, uint256 expectedAmount1) = (0 ether, 4999.999999999999999999 ether);
+
         // Step 4: 验证结果
-        assertEq(
-            poolBalance0,
-            expectedAmount0,
-            "incorrect token0 deposited amount"
-        );
-        assertEq(
-            poolBalance1,
-            expectedAmount1,
-            "incorrect token1 deposited amount"
-        );
+        assertEq(poolBalance0, expectedAmount0, "incorrect token0 deposited amount");
+        assertEq(poolBalance1, expectedAmount1, "incorrect token1 deposited amount");
     }
 
     // TODO: 测试在价格范围上方铸造流动性
@@ -122,7 +100,7 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
         // Step 1: 创建流动性范围数组
         LiquidityRange[] memory liquidity = new LiquidityRange[](1);
         liquidity[0] = liquidityRange(5050, 5550, 1 ether, 5000 ether, 5000);
-        
+
         // Step 2: 设置测试参数
         TestCaseParams memory params = TestCaseParams({
             wethBalance: 1 ether,
@@ -133,27 +111,15 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
             transferInSwapCallback: true,
             mintLiqudity: true
         });
-        
+
         // Step 3: 调用已实现的setupTestCase
         (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
 
-        (uint256 expectedAmount0, uint256 expectedAmount1) = (
-            1 ether,
-            0 ether
-        );
-        
+        (uint256 expectedAmount0, uint256 expectedAmount1) = (1 ether, 0 ether);
+
         // Step 4: 验证结果
-        assertEq(
-            poolBalance0,
-            expectedAmount0,
-            "incorrect token0 deposited amount"
-        );
-        assertEq(
-            poolBalance1,
-            expectedAmount1,
-            "incorrect token1 deposited amount"
-        );
-    
+        assertEq(poolBalance0, expectedAmount0, "incorrect token0 deposited amount");
+        assertEq(poolBalance1, expectedAmount1, "incorrect token1 deposited amount");
     }
 
     // TODO: 测试当回调中不转移代币时的失败情况
@@ -165,7 +131,7 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
         // Step 1: 创建流动性范围数组
         LiquidityRange[] memory liquidity = new LiquidityRange[](1);
         liquidity[0] = liquidityRange(4545, 5500, 1 ether, 5000 ether, 5000);
-        
+
         // Step 2: 设置测试参数
         TestCaseParams memory params = TestCaseParams({
             wethBalance: 0 ether,
@@ -176,18 +142,12 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
             transferInSwapCallback: true,
             mintLiqudity: false
         });
-        
+
         setupTestCase(params);
-        
+
         // 期望交易失败
         vm.expectRevert(encodeError("InsufficientInputAmount()"));
-        pool.mint(
-            address(this),
-            liquidity[0].lowerTick,
-            liquidity[0].upperTick,
-            liquidity[0].amount,
-            ""
-        );
+        pool.mint(address(this), liquidity[0].lowerTick, liquidity[0].upperTick, liquidity[0].amount, "");
     }
 
     // TODO: 测试闪电贷功能
@@ -212,42 +172,27 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
     }
 
     // 回调函数实现
-    function uniswapV3MintCallback(
-        uint256 amount0,
-        uint256 amount1,
-        bytes calldata data
-    ) public {
+    function uniswapV3MintCallback(uint256 amount0, uint256 amount1, bytes calldata data) public {
         if (transferInMintCallback) {
-            IUniswapV3Pool.CallbackData memory extra = abi.decode(
-                data,
-                (IUniswapV3Pool.CallbackData)
-            );
+            IUniswapV3Pool.CallbackData memory extra = abi.decode(data, (IUniswapV3Pool.CallbackData));
 
             IERC20(extra.token0).transferFrom(extra.payer, msg.sender, amount0);
             IERC20(extra.token1).transferFrom(extra.payer, msg.sender, amount1);
         }
     }
-    function uniswapV3SwapCallback(
-        int256 amount0,
-        int256 amount1,
-        bytes calldata data
-    ) public {
+
+    function uniswapV3SwapCallback(int256 amount0, int256 amount1, bytes calldata data) public {
         // TODO: 实现交换回调
-    // 只需要转移要支付的代币（amount > 0的那个）
+        // 只需要转移要支付的代币（amount > 0的那个）
     }
 
-    // function uniswapV3FlashCallback(
-    //     uint256 amount0,
-    //     uint256 amount1,
-    //     bytes calldata data
-    // ) public {
-    //     flashCallbackCalled = true;
-        
-    //     // TODO: 实现闪电贷回调
-    //     // 1. 验证借出的金额
-    //     // 2. 计算手续费
-    //     // 3. 归还本金+手续费
-    // }
+    function uniswapV3FlashCallback(uint256 amount0, uint256 amount1, bytes calldata data) public {
+        flashCallbackCalled = true;
+        (uint256 amount0, uint256 amount1) = abi.decode(data, (uint256, uint256));
+
+        if (amount0 > 0) token0.transfer(msg.sender, amount0);
+        if (amount1 > 0) token1.transfer(msg.sender, amount1);
+    }
 
     // 基础setupTestCase实现 - 这是测试的基础，必须先完成
     function setupTestCase(TestCaseParams memory params)
@@ -259,23 +204,15 @@ contract UniswapV3PoolTest is Test, UniswapV3PoolUtils {
         token1.mint(address(this), params.usdcBalance);
 
         // Step 2: 创建Pool
-        pool = new UniswapV3Pool(
-            address(token0),
-            address(token1),
-            sqrtP(params.currentPrice),
-            tick(params.currentPrice)
-        );
+        pool =
+            new UniswapV3Pool(address(token0), address(token1), sqrtP(params.currentPrice), tick(params.currentPrice));
 
         // Step 3: 如果需要，添加流动性
         if (params.mintLiqudity) {
             token0.approve(address(this), params.wethBalance);
             token1.approve(address(this), params.usdcBalance);
 
-            bytes memory extra = encodeExtra(
-                address(token0),
-                address(token1),
-                address(this)
-            );
+            bytes memory extra = encodeExtra(address(token0), address(token1), address(this));
 
             uint256 poolBalance0Tmp;
             uint256 poolBalance1Tmp;

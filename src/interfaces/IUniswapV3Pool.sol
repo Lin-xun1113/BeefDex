@@ -14,13 +14,9 @@ interface IUniswapV3Pool {
 
     function token1() external view returns (address);
 
-    function mint(
-        address owner,
-        int24 lowerTick,
-        int24 upperTick,
-        uint128 amount,
-        bytes calldata data
-    ) external returns (uint256 amount0, uint256 amount1);
+    function mint(address owner, int24 lowerTick, int24 upperTick, uint128 amount, bytes calldata data)
+        external
+        returns (uint256 amount0, uint256 amount1);
 
     function swap(
         address recipient,

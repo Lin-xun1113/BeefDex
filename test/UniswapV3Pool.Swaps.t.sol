@@ -117,27 +117,16 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
     }
 
     // 回调函数
-    function uniswapV3MintCallback(
-        uint256 amount0,
-        uint256 amount1,
-        bytes calldata data
-    ) public {
+    function uniswapV3MintCallback(uint256 amount0, uint256 amount1, bytes calldata data) public {
         if (transferInMintCallback) {
-            IUniswapV3Pool.CallbackData memory extra_ = abi.decode(
-                data,
-                (IUniswapV3Pool.CallbackData)
-            );
+            IUniswapV3Pool.CallbackData memory extra_ = abi.decode(data, (IUniswapV3Pool.CallbackData));
 
             token0.mint(msg.sender, amount0);
             token1.mint(msg.sender, amount1);
         }
     }
 
-    function uniswapV3SwapCallback(
-        int256 amount0,
-        int256 amount1,
-        bytes calldata data
-    ) public {
+    function uniswapV3SwapCallback(int256 amount0, int256 amount1, bytes calldata data) public {
         if (transferInSwapCallback) {
             // TODO: 实现交换回调
             // 提示：只转移amount > 0的代币
@@ -154,12 +143,8 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
         token1.mint(address(this), params.usdcBalance);
 
         // Step 2: 创建Pool
-        pool = new UniswapV3Pool(
-            address(token0),
-            address(token1),
-            sqrtP(params.currentPrice),
-            tick(params.currentPrice)
-        );
+        pool =
+            new UniswapV3Pool(address(token0), address(token1), sqrtP(params.currentPrice), tick(params.currentPrice));
 
         // Step 3: 如果需要，添加流动性
         if (params.mintLiqudity) {

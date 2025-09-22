@@ -12,19 +12,14 @@ library Tick {
         int128 liquidityNet;
     }
 
-    function update(
-        mapping(int24 => Tick.Info) storage self,
-        int24 tick,
-        int128 liquidityDelta,
-        bool upper
-    ) internal returns (bool flipped) {
+    function update(mapping(int24 => Tick.Info) storage self, int24 tick, int128 liquidityDelta, bool upper)
+        internal
+        returns (bool flipped)
+    {
         Tick.Info storage tickInfo = self[tick];
 
         uint128 liquidityBefore = tickInfo.liquidityGross;
-        uint128 liquidityAfter = LiquidityMath.addLiquidity(
-            liquidityBefore,
-            liquidityDelta
-        );
+        uint128 liquidityAfter = LiquidityMath.addLiquidity(liquidityBefore, liquidityDelta);
 
         flipped = (liquidityAfter == 0) != (liquidityBefore == 0);
 
