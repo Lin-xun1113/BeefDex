@@ -116,8 +116,8 @@ contract UniswapV3Pool is IUniswapV3Pool {
 
         if (amount == 0) revert ZeroLiquidity();
 
-        bool flippedLower = ticks.update(lowerTick, int128(amount), false);
-        bool flippedUpper = ticks.update(upperTick, int128(amount), true);
+        bool flippedLower = ticks.update(lowerTick, int128(int256(uint256(amount))), false);
+        bool flippedUpper = ticks.update(upperTick, int128(int256(uint256(amount))), true);
 
         if (flippedLower) {
             tickBitmap.flipTick(lowerTick, 1);

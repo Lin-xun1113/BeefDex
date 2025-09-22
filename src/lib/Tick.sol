@@ -34,8 +34,8 @@ library Tick {
 
         tickInfo.liquidityGross = liquidityAfter;
         tickInfo.liquidityNet = upper
-            ? int128(int256(tickInfo.liquidityNet) - liquidityDelta)
-            : int128(int256(tickInfo.liquidityNet) + liquidityDelta);
+            ? int128(int256(tickInfo.liquidityNet) - int256(liquidityDelta))
+            : int128(int256(tickInfo.liquidityNet) + int256(liquidityDelta));
     }
 
     function cross(mapping(int24 => Tick.Info) storage self, int24 tick)
