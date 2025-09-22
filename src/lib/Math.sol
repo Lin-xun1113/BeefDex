@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.14;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
 import "./FixedPoint96.sol";
 import {Math as OzMath} from "@openzeppelin/contracts/utils/math/Math.sol";

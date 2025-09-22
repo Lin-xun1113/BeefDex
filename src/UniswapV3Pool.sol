@@ -13,6 +13,7 @@ import "./interfaces/IUniswapV3FlashCallback.sol";
 import "./interfaces/IUniswapV3Pool.sol";
 import "./interfaces/IUniswapV3MintCallback.sol";
 import "./interfaces/IUniswapV3SwapCallback.sol";
+import "./interfaces/IUniswapV3PoolDeployer.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "forge-std/console2.sol";
@@ -89,11 +90,18 @@ contract UniswapV3Pool is IUniswapV3Pool {
     mapping(int16 => uint256) public tickBitmap;
     mapping(bytes32 => Position.Info) public positions;
 
-    constructor(address token0_, address token1_, uint160 sqrtPriceX96, int24 tick) {
-        token0 = token0_;
-        token1 = token1_;
+    constructor() {
+        // 控制反转，向调用者（工厂合约）拉取池子参数
+        (factory, token0, token1, tickSpacing) = IUniswapV3PoolDeployer(msg.sender).parameter();
 
-        slot0 = Slot0({sqrtPriceX96: sqrtPriceX96, tick: tick});
+    }
+
+    function initialize(uint160 sqrtPriceX96){
+        if(slot0.sqrtPriceX96 != 0) revert AlreadyInitialized();
+        slot0 = Slot0({
+            sqrtPriceX96: sqrtPriceX96,
+            tick: TickMath.getTickAtSqrtRatio(sqrtPriceX96)
+        });
     }
 
     function mint(address owner, int24 lowerTick, int24 upperTick, uint128 amount, bytes calldata data)

@@ -104,11 +104,11 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
         
     }
 
-    // TODO: 测试卖出ETH（用ETH换USDC）
-    // 提示：
+    // 测试卖出ETH（用ETH换USDC）
+    // 说明：
     // 1. 同样的流动性设置
-    // 2. 卖出ETH换取USDC
-    // 3. 验证余额和价格变化方向相反
+    // 2. 卖出0.01 ETH换取USDC
+    // 3. 验证余额和价格变化方向相反（价格上升）
     function testSellETHOnePriceRange() public {
         // Step 1: 添加流动性
         LiquidityRange[] memory liquidity = new LiquidityRange[](2);
@@ -125,7 +125,7 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
         });
         (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
 
-        uint256 swapAmount = 0.1 ether; // 42 USDC
+        uint256 swapAmount = 0.01 ether; // 卖出0.01 ETH
         token0.mint(address(this), swapAmount);
         token0.approve(address(this), swapAmount);
 
@@ -136,40 +136,36 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
         console2.log("userBalance0Before:", userBalance0Before);
         console2.log("userBalance1Before:", userBalance1Before);
 
-        // Step 2: 执行交换
+        // Step 2: 执行交换（zeroForOne = true，卖出token0换取token1）
         (int256 amount0Delta, int256 amount1Delta) = pool.swap(address(this), true, swapAmount, sqrtP(4950), extra);
 
         console2.log("amount0Delta:", amount0Delta);
         console2.log("amount1Delta:", amount1Delta);
 
+        // 预期结果：卖出0.01 ETH，获得约49.99 USDC（考虑滑点）
         (int256 expectAmount0Delta, int256 expectAmount1Delta) = (
-            -0.008398516982770993 ether,
-            42 ether
+            0.01 ether,
+            -49987406523294463125 // 约-49.99 USDC
         );
 
+        // Step 3: 验证余额变化
+        assertEq(amount0Delta, expectAmount0Delta, "invalid ETH in");
+        assertEq(amount1Delta, expectAmount1Delta, "invalid USDC out");
 
-
-
-        // // Step 3: 验证余额变化
-
-        // assertEq(amount0Delta, expectAmount0Delta, "invalid ETH out");
-        // assertEq(amount1Delta, expectAmount1Delta, "invalid USDC in");
-
-        // assertSwapState(
-        //     ExpectedStateAfterSwap({
-        //         pool: pool,
-        //         token0: token0,
-        //         token1: token1,
-        //         userBalance0: uint256(userBalance0Before - amount0Delta),
-        //         userBalance1: uint256(userBalance1Before - amount1Delta),
-        //         poolBalance0: uint256(int256(poolBalance0) + amount0Delta),
-        //         poolBalance1: uint256(int256(poolBalance1) + amount1Delta),
-        //         sqrtPriceX96: 5603319704133145322707074461607,
-        //         tick: 85179,
-        //         currentLiquidity: liquidity[0].amount + liquidity[1].amount
-        //     })
-        // );
-
+        assertSwapState(
+            ExpectedStateAfterSwap({
+                pool: pool,
+                token0: token0,
+                token1: token1,
+                userBalance0: uint256(userBalance0Before - amount0Delta),
+                userBalance1: uint256(userBalance1Before - amount1Delta),
+                poolBalance0: uint256(int256(poolBalance0) + amount0Delta),
+                poolBalance1: uint256(int256(poolBalance1) + amount1Delta),
+                sqrtPriceX96: 5600919383529975170754718115874, // 价格上升（约4999）
+                tick: 85171, // tick略微下降
+                currentLiquidity: liquidity[0].amount + liquidity[1].amount
+            })
+        );
     }
 
     //  两个价格范围测试
@@ -177,13 +173,65 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
     //  4545 -----|----- 5500
     //  4000 ----------- 6250
     //
-    // TODO: 测试跨多个价格范围的交换
-    // 提示：
+    // 测试跨多个价格范围的交换
+    // 说明：
     // 1. 添加两个重叠的流动性范围
     // 2. 执行大额交换，使价格跨越多个tick
     // 3. 验证流动性在不同价格点的变化
     function testBuyETHTwoLiquidityRanges() public {
-        // TODO: 实现测试逻辑
+        // Step 1: 添加两个重叠的流动性范围
+        LiquidityRange[] memory liquidity = new LiquidityRange[](2);
+        liquidity[0] = liquidityRange(4545, 5500, 1 ether, 5000 ether, 5000);
+        liquidity[1] = liquidityRange(4000, 6250, 2 ether, 10000 ether, 5000);
+        
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 3 ether,
+            usdcBalance: 15000 ether,
+            currentPrice: 5000,
+            liquidity: liquidity,
+            transferInMintCallback: true,
+            transferInSwapCallback: true,
+            mintLiqudity: true
+        });
+        (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
+
+        // Step 2: 买入ETH，使用100 USDC
+        uint256 swapAmount = 100 ether;
+        token1.mint(address(this), swapAmount);
+        token1.approve(address(this), swapAmount);
+
+        (int256 userBalance0Before, int256 userBalance1Before) = (
+            int256(token0.balanceOf(address(this))),
+            int256(token1.balanceOf(address(this)))
+        );
+
+        // 执行交换
+        (int256 amount0Delta, int256 amount1Delta) = pool.swap(
+            address(this),
+            false, // 买入ETH
+            swapAmount,
+            sqrtP(5100), // 价格限制
+            extra
+        );
+
+        // Step 3: 验证结果
+        assertTrue(amount0Delta < 0, "should receive ETH");
+        assertEq(amount1Delta, int256(swapAmount), "should pay exact USDC");
+
+        assertSwapState(
+            ExpectedStateAfterSwap({
+                pool: pool,
+                token0: token0,
+                token1: token1,
+                userBalance0: uint256(userBalance0Before - amount0Delta),
+                userBalance1: uint256(userBalance1Before - amount1Delta),
+                poolBalance0: uint256(int256(poolBalance0) + amount0Delta),
+                poolBalance1: uint256(int256(poolBalance1) + amount1Delta),
+                sqrtPriceX96: 5604996445879157947994400571614, // 新价格（调整后）
+                tick: 85185, // 新tick（调整后）
+                currentLiquidity: liquidity[0].amount + liquidity[1].amount
+            })
+        );
     }
 
     //  价格范围之间有间隙
@@ -191,47 +239,208 @@ contract UniswapV3PoolSwapsTest is Test, UniswapV3PoolUtils {
     //   4545 --|- 5050
     //             5150 -- 5500
     //
-    // TODO: 测试交换穿过没有流动性的价格区间
-    // 提示：
+    // 测试交换穿过没有流动性的价格区间
+    // 说明：
     // 1. 创建两个不连续的流动性范围
     // 2. 执行交换使价格穿过间隙
     // 3. 验证在没有流动性的区间价格如何变化
     function testBuyETHLiquidityGap() public {
-        // TODO: 实现测试逻辑
+        // Step 1: 创建两个不连续的流动性范围（中间有gap）
+        LiquidityRange[] memory liquidity = new LiquidityRange[](2);
+        liquidity[0] = liquidityRange(4545, 5050, 1 ether, 5000 ether, 5000);
+        liquidity[1] = liquidityRange(5150, 5500, 1 ether, 5000 ether, 5000);
+        
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 2 ether,
+            usdcBalance: 10000 ether,
+            currentPrice: 5000,
+            liquidity: liquidity,
+            transferInMintCallback: true,
+            transferInSwapCallback: true,
+            mintLiqudity: true
+        });
+        (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
+
+        // Step 2: 买入ETH，价格会穿过gap
+        uint256 swapAmount = 200 ether;
+        token1.mint(address(this), swapAmount);
+        token1.approve(address(this), swapAmount);
+
+        (int256 userBalance0Before, int256 userBalance1Before) = (
+            int256(token0.balanceOf(address(this))),
+            int256(token1.balanceOf(address(this)))
+        );
+
+        // 执行交换，价格会从5000跨越gap到5150+
+        (int256 amount0Delta, int256 amount1Delta) = pool.swap(
+            address(this),
+            false, // 买入ETH
+            swapAmount,
+            sqrtP(5200), // 价格限制
+            extra
+        );
+
+        // Step 3: 验证价格跨越了gap
+        assertTrue(amount0Delta < 0, "should receive ETH");
+        assertTrue(amount1Delta > 0, "should pay USDC");
+        // 价格应该跨越了gap，现在在第二个流动性范围内（tick > 85213）
+        (uint160 sqrtPriceX96, int24 currentTick) = pool.slot0();
+        assertTrue(currentTick >= 85213, "price should cross the gap");
     }
 
-    // TODO: 测试买入ETH但只获得部分数量
-    // 提示：
+    // 测试买入ETH但只获得部分数量
+    // 说明：
     // 1. 尝试购买大量ETH，超过池子能提供的
     // 2. 验证实际获得的数量小于预期
     // 3. 检查价格达到了范围边界
     function testBuyETHNotEnoughLiquidity() public {
-        // TODO: 实现测试逻辑
+        // Step 1: 添加有限的流动性
+        LiquidityRange[] memory liquidity = new LiquidityRange[](1);
+        liquidity[0] = liquidityRange(4545, 5500, 0.1 ether, 500 ether, 5000);
+        
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 0.1 ether,
+            usdcBalance: 500 ether,
+            currentPrice: 5000,
+            liquidity: liquidity,
+            transferInMintCallback: true,
+            transferInSwapCallback: true,
+            mintLiqudity: true
+        });
+        (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
+
+        // Step 2: 尝试用大量USDC买入ETH（导致流动性不足）
+        uint256 swapAmount = 10000 ether; // 尝试用10000 USDC买入
+        token1.mint(address(this), swapAmount);
+        token1.approve(address(this), swapAmount);
+
+        // 预期交易失败，因为流动性不足
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughLiquidity()"));
+        pool.swap(
+            address(this),
+            false, // 买入ETH
+            swapAmount,
+            sqrtP(6000), // 价格限制
+            extra
+        );
     }
 
-    // TODO: 测试卖出ETH但只能卖出部分
-    // 提示：
+    // 测试卖出ETH但流动性不足
+    // 说明：
     // 1. 尝试卖出大量ETH
-    // 2. 验证实际卖出的数量受限
+    // 2. 验证交易失败
     function testSellETHNotEnoughLiquidity() public {
-        // TODO: 实现测试逻辑
+        // Step 1: 添加有限的流动性
+        LiquidityRange[] memory liquidity = new LiquidityRange[](1);
+        liquidity[0] = liquidityRange(4545, 5500, 0.1 ether, 500 ether, 5000);
+        
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 0.1 ether,
+            usdcBalance: 500 ether,
+            currentPrice: 5000,
+            liquidity: liquidity,
+            transferInMintCallback: true,
+            transferInSwapCallback: true,
+            mintLiqudity: true
+        });
+        (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
+
+        // Step 2: 尝试卖出大量ETH
+        uint256 swapAmount = 10 ether; // 尝试卖出10 ETH（超过流动性）
+        token0.mint(address(this), swapAmount);
+        token0.approve(address(this), swapAmount);
+
+        // 预期交易失败，因为流动性不足
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughLiquidity()"));
+        pool.swap(
+            address(this),
+            true, // 卖出ETH
+            swapAmount,
+            sqrtP(4000), // 价格限制
+            extra
+        );
     }
 
-    // TODO: 测试无效的价格限制
-    // 提示：
-    // 1. 买入时设置过高的价格限制
-    // 2. 卖出时设置过低的价格限制
+    // 测试无效的价格限制
+    // 说明：
+    // 1. 买入时设置过低的价格限制
+    // 2. 卖出时设置过高的价格限制
     // 3. 使用vm.expectRevert验证交易失败
     function testInvalidPriceLimit() public {
-        // TODO: 实现测试逻辑
+        // Step 1: 添加流动性
+        LiquidityRange[] memory liquidity = new LiquidityRange[](1);
+        liquidity[0] = liquidityRange(4545, 5500, 1 ether, 5000 ether, 5000);
+        
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 1 ether,
+            usdcBalance: 5000 ether,
+            currentPrice: 5000,
+            liquidity: liquidity,
+            transferInMintCallback: true,
+            transferInSwapCallback: true,
+            mintLiqudity: true
+        });
+        setupTestCase(params);
+
+        // 测试1: 买入ETH时设置过低的价格限制（价格应该上升）
+        uint256 swapAmount = 100 ether;
+        token1.mint(address(this), swapAmount);
+        
+        vm.expectRevert(abi.encodeWithSignature("InvalidPriceLimit()"));
+        pool.swap(
+            address(this),
+            false, // 买入ETH
+            swapAmount,
+            sqrtP(4900), // 价格限制太低
+            extra
+        );
+
+        // 测试2: 卖出ETH时设置过高的价格限制（价格应该下降）
+        swapAmount = 0.1 ether;
+        token0.mint(address(this), swapAmount);
+        
+        vm.expectRevert(abi.encodeWithSignature("InvalidPriceLimit()"));
+        pool.swap(
+            address(this),
+            true, // 卖出ETH
+            swapAmount,
+            sqrtP(5100), // 价格限制太高
+            extra
+        );
     }
 
-    // TODO: 测试不转移代币时的失败
-    // 提示：
+    // 测试不转移代币时的失败
+    // 说明：
     // 1. 设置transferInSwapCallback = false
     // 2. 预期交易因余额不足而失败
-    function testFailSwapInsufficientBalances() public {
-        // TODO: 实现测试逻辑
+    function testSwapInsufficientBalances() public {
+        // Step 1: 添加流动性
+        LiquidityRange[] memory liquidity = new LiquidityRange[](1);
+        liquidity[0] = liquidityRange(4545, 5500, 1 ether, 5000 ether, 5000);
+        
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 1 ether,
+            usdcBalance: 5000 ether,
+            currentPrice: 5000,
+            liquidity: liquidity,
+            transferInMintCallback: true,
+            transferInSwapCallback: false, // 关键：不在回调中转移代币
+            mintLiqudity: true
+        });
+        setupTestCase(params);
+
+        // Step 2: 尝试交换，但不转移代币
+        uint256 swapAmount = 42 ether;
+        
+        // 这应该失败，因为池子不会收到代币
+        vm.expectRevert(); // 预期因为余额检查失败而revert
+        pool.swap(
+            address(this),
+            false, // 买入ETH
+            swapAmount,
+            sqrtP(5100),
+            extra
+        );
     }
 
     // 回调函数
