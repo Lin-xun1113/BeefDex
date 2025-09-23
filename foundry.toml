@@ -6,4 +6,5 @@ remappings = [
   'forge-std/=lib/forge-std/src/',
   '@openzeppelin/=lib/openzeppelin-contracts/',
   'abdk-libraries-solidity/=lib/abdk-libraries-solidity',
+  'solidity-bytes-utils/=lib/solidity-bytes-utils/'
 ]
